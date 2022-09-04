@@ -123,7 +123,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future imgScan() async {
-    var image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    var image = await ImagePicker().getImage(source: ImageSource.gallery);
     if (image == null) return;
     final rest = await FlutterQrReader.imgScan(image.path);
 
