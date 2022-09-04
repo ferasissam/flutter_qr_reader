@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter_qr_reader/flutter_qr_reader.dart';
-import 'package:flutter_qr_reader_example/qrcode_reader_view.dart';
+import 'package:flutter_qr_reader/qrcode_reader_view.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
