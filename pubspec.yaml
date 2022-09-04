@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  image_picker:
+  image_picker: 0.7.4
   permission_handler:
 
 dev_dependencies:
