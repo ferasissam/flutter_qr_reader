@@ -11,8 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  image_picker: 0.6.2+3
-  permission_handler:
+  image_picker:
+  permission_handler: ^7.2.0
 
 dev_dependencies:
   flutter_test:
