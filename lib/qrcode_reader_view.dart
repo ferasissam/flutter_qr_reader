@@ -1,26 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_qr_reader/flutter_qr_reader.dart';
-import "package:image_picker/image_picker.dart";
-import 'package:permission_handler/permission_handler.dart';
+import 'flutter_qr_reader.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// 使用前需已经获取相关权限
 /// Relevant privileges must be obtained before use
 class QrcodeReaderView extends StatefulWidget {
   final Widget? headerWidget;
-  final Future Function(String) onScan;
+  final Future Function(String?) onScan;
   final double scanBoxRatio;
   final Color boxLineColor;
   final Widget? helpWidget;
-
   QrcodeReaderView({
-    required this.onScan,
-    required this.headerWidget,
-    this.helpWidget,
-    this.boxLineColor = Colors.cyanAccent,
-    this.scanBoxRatio = 0.85,
-  });
+                     Key? key,
+                     required this.onScan,
+                     this.headerWidget,
+                     this.boxLineColor = Colors.cyanAccent,
+                     this.helpWidget,
+                     this.scanBoxRatio = 0.85,
+                   }) : super(key: key);
 
   @override
   QrcodeReaderViewState createState() => new QrcodeReaderViewState();
@@ -31,76 +30,24 @@ class QrcodeReaderView extends StatefulWidget {
 /// GlobalKey<QrcodeReaderViewState> qrViewKey = GlobalKey();
 /// qrViewKey.currentState.startScan();
 /// ```
-class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderStateMixin, WidgetsBindingObserver {
-  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-  QrReaderViewController? _controller;
+class QrcodeReaderViewState extends State<QrcodeReaderView>
+        with TickerProviderStateMixin {
+  late QrReaderViewController _controller;
   AnimationController? _animationController;
-  bool openFlashlight = false;
+  bool? openFlashlight;
   Timer? _timer;
-  bool _init = false;
-  bool _showScanView = false;
-  bool _showPermission = true;
-
-  // 如果需要打开APP设置页面进行授权使用该方式获取权限状态
-  Completer<bool>? permissionCompleter;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance!.addObserver(this);
-    showScanView();
-  }
-
-  Future showScanView() async {
-    if (true == await permission()) {
-      await Future.delayed(Duration(milliseconds: 300));
-      setState(() {
-        _init = true;
-        _showPermission = false;
-        _showScanView = true;
-      });
-    } else {
-      setState(() {
-        _init = true;
-        _showScanView = false;
-        _showPermission = true;
-      });
-    }
-  }
-
-  Future<bool> permission() async {
-    final status = await Permission.camera.status;
-    return status.isGranted;
-  }
-
-  void requestPermission() async {
-    final ok = await _requestPermission();
-    if (ok) {
-      showScanView();
-    }
-  }
-
-  Future<bool> _requestPermission() async {
-    var status = await Permission.camera.status;
-    if (status.isRestricted || status.isPermanentlyDenied) {
-      openAppSettings();
-      permissionCompleter = Completer<bool>();
-      return permissionCompleter!.future;
-    } else if (!status.isGranted) {
-      status = await Permission.camera.request();
-    }
-    return status.isGranted;
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state == AppLifecycleState.resumed && permissionCompleter != null) {
-      permissionCompleter!.complete(await permission());
-    }
+    openFlashlight = false;
+    _initAnimation();
   }
 
   void _initAnimation() {
-    _animationController = AnimationController(vsync: this, duration: Duration(milliseconds: 1000));
+    setState(() {
+      _animationController = AnimationController(
+              vsync: this, duration: Duration(milliseconds: 1000));
+    });
     _animationController!
       ..addListener(_upState)
       ..addStatusListener((state) {
@@ -131,11 +78,10 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
 
   void _onCreateController(QrReaderViewController controller) async {
     _controller = controller;
-    startScan();
+    _controller.startCamera(_onQrBack);
   }
 
   bool isScan = false;
-
   Future _onQrBack(data, _) async {
     if (isScan == true) return;
     isScan = true;
@@ -143,19 +89,19 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
     await widget.onScan(data);
   }
 
-  void startScan() async {
+  void startScan() {
     isScan = false;
-    await _controller?.startCamera(_onQrBack);
+    _controller.startCamera(_onQrBack);
     _initAnimation();
   }
 
   void stopScan() {
-    _controller?.stopCamera();
     _clearAnimation();
+    _controller.stopCamera();
   }
 
-  Future<bool> setFlashlight() async {
-    openFlashlight = await _controller?.setFlashlight() ?? false;
+  Future<bool?> setFlashlight() async {
+    openFlashlight = await _controller.setFlashlight();
     setState(() {});
     return openFlashlight;
   }
@@ -174,102 +120,6 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
 
   @override
   Widget build(BuildContext context) {
-    if (_init == false) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-        ),
-      );
-    }
-    if (_showPermission) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-        ),
-        body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                child: Text(
-                  "权限提醒",
-                  style: TextStyle(
-                    fontSize: 36,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              SizedBox(height: 36),
-              Container(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '功能运行必须权限',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w200,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: "相机访问权限：", style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: "扫码程序必须使用相机实时完成扫码识别。"),
-                        ],
-                      ),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                    SizedBox(height: 36),
-                    Text(
-                      '相册图片识别所需权限',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w200,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: "读写手机存储权限：", style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: "实现选取任意图片识别图片中的二维码；该权限会在你主动使用时提示您申请该权限。"),
-                        ],
-                      ),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 120),
-              TextButton(
-                onPressed: requestPermission,
-                child: Text(
-                  '授权运行必须权限',
-                  style: TextStyle(color: Colors.white),
-                ),
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.green[900]),
-                  padding: MaterialStateProperty.all(EdgeInsets.symmetric(vertical: 8, horizontal: 16)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
     final flashOpen = Image.asset(
       "assets/tool_flashlight_open.png",
       package: "flutter_qr_reader",
@@ -297,13 +147,11 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
             SizedBox(
               width: constraints.maxWidth,
               height: constraints.maxHeight,
-              child: _showScanView
-                  ? QrReaderView(
-                      width: constraints.maxWidth,
-                      height: constraints.maxHeight,
-                      callback: _onCreateController,
-                    )
-                  : Container(),
+              child: QrReaderView(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                callback: _onCreateController,
+              ),
             ),
             if (widget.headerWidget != null) widget.headerWidget!,
             Positioned(
@@ -313,7 +161,8 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
                 painter: QrScanBoxPainter(
                   boxLineColor: widget.boxLineColor,
                   animationValue: _animationController?.value ?? 0,
-                  isForward: _animationController?.status == AnimationStatus.forward,
+                  isForward:
+                  _animationController?.status == AnimationStatus.forward,
                 ),
                 child: SizedBox(
                   width: qrScanSize,
@@ -322,7 +171,9 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
               ),
             ),
             Positioned(
-              top: (constraints.maxHeight - qrScanSize) * 0.333333 + qrScanSize + 24,
+              top: (constraints.maxHeight - qrScanSize) * 0.333333 +
+                      qrScanSize +
+                      24,
               width: constraints.maxWidth,
               child: Align(
                 alignment: Alignment.center,
@@ -333,20 +184,25 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
               ),
             ),
             Positioned(
-              top: (constraints.maxHeight - qrScanSize) * 0.333333 + qrScanSize - 12 - 35,
+              top: (constraints.maxHeight - qrScanSize) * 0.333333 +
+                      qrScanSize -
+                      12 -
+                      35,
               width: constraints.maxWidth,
               child: Align(
                 alignment: Alignment.center,
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onTap: setFlashlight,
-                  child: openFlashlight ? flashOpen : flashClose,
+                  child: openFlashlight! ? flashOpen : flashClose,
                 ),
               ),
             ),
             Positioned(
               width: constraints.maxWidth,
-              bottom: constraints.maxHeight == mediaQuery.size.height ? 12 + mediaQuery.padding.top : 12,
+              bottom: constraints.maxHeight == mediaQuery.size.height
+                      ? 12 + mediaQuery.padding.top
+                      : 12,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -403,9 +259,14 @@ class QrcodeReaderViewState extends State<QrcodeReaderView> with TickerProviderS
 class QrScanBoxPainter extends CustomPainter {
   final double animationValue;
   final bool isForward;
-  final Color boxLineColor;
+  final Color? boxLineColor;
 
-  QrScanBoxPainter({required this.animationValue, required this.isForward, required this.boxLineColor});
+  QrScanBoxPainter(
+          {required this.animationValue,
+            required this.isForward,
+            this.boxLineColor})
+          : assert(animationValue != null),
+            assert(isForward != null);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -437,7 +298,8 @@ class QrScanBoxPainter extends CustomPainter {
     // rightBottom
     path.moveTo(size.width, size.height - 50);
     path.lineTo(size.width, size.height - 12);
-    path.quadraticBezierTo(size.width, size.height, size.width - 12, size.height);
+    path.quadraticBezierTo(
+            size.width, size.height, size.width - 12, size.height);
     path.lineTo(size.width - 50, size.height);
     // leftBottom
     path.moveTo(50, size.height);
@@ -447,7 +309,8 @@ class QrScanBoxPainter extends CustomPainter {
 
     canvas.drawPath(path, borderPaint);
 
-    canvas.clipRRect(BorderRadius.all(Radius.circular(12)).toRRect(Offset.zero & size));
+    canvas.clipRRect(
+            BorderRadius.all(Radius.circular(12)).toRRect(Offset.zero & size));
 
     // 绘制横向网格
     final linePaint = Paint();
@@ -455,7 +318,7 @@ class QrScanBoxPainter extends CustomPainter {
     final leftPress = (size.height + lineSize) * animationValue - lineSize;
     linePaint.style = PaintingStyle.stroke;
     linePaint.shader = LinearGradient(
-      colors: [Colors.transparent, boxLineColor],
+      colors: [Colors.transparent, boxLineColor!],
       begin: isForward ? Alignment.topCenter : Alignment(0.0, 2.0),
       end: isForward ? Alignment(0.0, 0.5) : Alignment.topCenter,
     ).createShader(Rect.fromLTWH(0, leftPress, size.width, lineSize));
@@ -482,8 +345,10 @@ class QrScanBoxPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(QrScanBoxPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRepaint(QrScanBoxPainter oldDelegate) =>
+          animationValue != oldDelegate.animationValue;
 
   @override
-  bool shouldRebuildSemantics(QrScanBoxPainter oldDelegate) => animationValue != oldDelegate.animationValue;
+  bool shouldRebuildSemantics(QrScanBoxPainter oldDelegate) =>
+          animationValue != oldDelegate.animationValue;
 }

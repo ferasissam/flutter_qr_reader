@@ -138,7 +138,6 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
     }
   }
 
-  @SuppressLint("StaticFieldLeak")
   private final class AutoFocusTask extends AsyncTask<Object, Object, Object> {
     @Override protected Object doInBackground(Object... voids) {
       try {

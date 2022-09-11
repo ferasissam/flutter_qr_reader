@@ -1,12 +1,10 @@
 group 'me.hetian.flutter_qr_reader'
-version '1.0'
+version '1.0-SNAPSHOT'
 
 buildscript {
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }  // <= here
-        maven { url 'https://maven.aliyun.com/repository/google' }  // <= here
         google()
-        jcenter()
+        mavenCentral()
     }
 
     dependencies {
@@ -16,10 +14,8 @@ buildscript {
 
 rootProject.allprojects {
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/jcenter' }  // <= here
-        maven { url 'https://maven.aliyun.com/repository/google' }  // <= here
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 
@@ -30,9 +26,14 @@ android {
 
     defaultConfig {
         minSdkVersion 16
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    lintOptions {
+        disable 'InvalidPackage'
     }
 }
 
+
 dependencies {
-    implementation('com.google.zxing:core:3.4.1')
+    implementation('com.google.zxing:core:3.3.3')
 }
